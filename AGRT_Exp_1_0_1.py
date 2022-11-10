@@ -25,7 +25,7 @@ import os #handy system and path functions
 
 ##########################################################################################################
 
-expVersion = '1.0.0'
+expVersion = '1.0.1'
 
 ##########################################################################################################
 
@@ -40,8 +40,8 @@ BREAK_TRIALS = int(NUM_TRIALS/2)
 MAX_TIME = 10   # Maximum duration of a trial (in seconds)
 DISPLAY_DIMENSIONS = (1280, 800) #monitors.Monitor('monitor').getSizePix() # Isn't working
 ONSET_RANGE = (.25, .75) #(in seconds)
-_SIZE = (50, 65) # Features for dimension 1 (sizes in pixels)
-_ORI = (50, 60) # Features for dimension 2 (I believe pixels per cycle)
+_SIZE = (55, 60) # Features for dimension 1 (sizes in pixels)
+_ORI = (50, 55) # Features for dimension 2 (I believe pixels per cycle)
 STIM_SIZES = (_SIZE[0], _SIZE[0], _SIZE[1], _SIZE[1]) # Radius of circle stimuli
 STIM_ORI = (_ORI[0], _ORI[1], _ORI[0], _ORI[1])
 #GAUSS_SD = 10 # Standard deviation of the Gaussian mask for the stimuli
@@ -50,8 +50,8 @@ MASK_DURATION = .25
 PROBE_DURATION = .25
 STIM_LW = 3 # Line width of stimuli
 STIM_HUE = 180
-STIM_SAT = (.5, 1)
-STIM_VAL = (.5, .6)
+STIM_SAT = (.5, .8)
+STIM_VAL = (.4, .6)
 STIM_COLS = [[STIM_HUE, STIM_SAT[0], STIM_VAL[0]], 
 	[STIM_HUE, STIM_SAT[0], STIM_VAL[1]], 
 	[STIM_HUE, STIM_SAT[1], STIM_VAL[0]], 
