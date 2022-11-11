@@ -25,7 +25,7 @@ import os #handy system and path functions
 
 ##########################################################################################################
 
-expVersion = '1.0.1'
+expVersion = '1.0.2'
 
 ##########################################################################################################
 
@@ -362,7 +362,7 @@ if expInfo['cond'] == 'a':
 	# Set up extreme stimuli, run 3 blocks (12 trials) with them
 	# Run the remaining trials passing responses to the PsiHandler and resetting stimuli between trials
 	# Save stimuli
-	pass
+	raise RuntimeError("Condition not yet implemented. Please use 'cond' = 'p' for now.")
 elif expInfo['cond'] == 'p':
 	# Pilot Condition
 	for block in range(NUM_PRACTICE_BLOCKS):
