@@ -25,7 +25,7 @@ import os #handy system and path functions
 
 ##########################################################################################################
 
-expVersion = '1.0.2'
+expVersion = '1.0.3'
 
 ##########################################################################################################
 
@@ -50,14 +50,14 @@ MASK_DURATION = .25
 PROBE_DURATION = .25
 STIM_LW = 3 # Line width of stimuli
 STIM_HUE = 180
-STIM_SAT = (.5, .8)
-STIM_VAL = (.4, .6)
+STIM_SAT = (.5, .7)
+STIM_VAL = (.4, .55)
 STIM_COLS = [[STIM_HUE, STIM_SAT[0], STIM_VAL[0]], 
 	[STIM_HUE, STIM_SAT[0], STIM_VAL[1]], 
 	[STIM_HUE, STIM_SAT[1], STIM_VAL[0]], 
 	[STIM_HUE, STIM_SAT[1], STIM_VAL[1]]]
 STIM_SIZE = 200
-MASK_SIZE = 128
+MASK_SIZE = 256
 INSTRUCTION_HEIGHT = 40 # size of the font for instructions
 
 
