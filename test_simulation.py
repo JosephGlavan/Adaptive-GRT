@@ -1,45 +1,38 @@
+# Joseph J Glavan 2023-09-15
 # Test simulation to validate conversion from R to Python
-
-# To Do:
-# - import stuff (e.g., psychopy, new handler file)
-# - write subject model
-# - write adaptive block
-# - write main exp block
-# - data output
+# Simulates the same subject 100 times through 100 adaptive trials and 1000 GRT trials
 
 import AGRT
 import os
-from psychopy import data
+from psychopy import data, core
+
 
 nReps = 100
 
-#def sm (stimulus):
-#    return AGRT.GRTSubjectModel (stimulus, )
 
-
-# create and open file
+# Create and open file
 if not os.path.isdir('data'):
     os.makedirs('data') #if this fails (e.g. permissions) we will get error
 filename = 'data' + os.path.sep + data.getDateStr()
 file = filename+'.txt'
 logFile=open(file, 'a')
 
-# write header
-logFile.write("")
+# Write header
+logFile.write("Version\tDate\tSubject\tCondition\tParams\tBlock\tTrial\tStimulus\tResponse\tRT\tLambda\n")
 
-def apf (stimulus, optArgs, result):
-    # log stuff
-    pass
-
-def gpf (stimulus, optArgs, result):
-    # log stuff
-    pass
-
+# Simulate the study
 for i in range(nReps):
+    expInfo = [1.0, # Version
+               data.getDateStr(), # Date
+               i, # Participant
+               'a'] # Cond
+    
     AGRT.RunAdaptiveGRTExperiment(trialFunction=AGRT.GRTSubjectModel, nAdaptiveTrials=100, nGRTtrials=1000, 
                                   dim1range=(100, 800), dim2range=(1, 12), dim1steps=100, dim2steps=100, 
-                                  lapse=0.0, overallAccuracy=0.75, 
-                                  adaptiveFunArgs=((600, 4), (0, 0), (100, .8), (.1, 0), (0, .4), (.9, 0, -.9, 0)), adaptivePostFun=apf, 
-                                  blockingFactor=2, 
-                                  grtFunArgs=((600, 4), (0, 0), (100, .8), (.1, 0), (0, .4), (.9, 0, -.9, 0)), grtPostFun=gpf)
+                                  lapse=0.0, overallAccuracy=0.75, blockingFactor=2, 
+                                  adaptiveFunArgs=((600, 4), (0, 0), (100, .8), (.1, 0), (0, .4), (.9, 0, -.9, 0)), 
+                                  grtFunArgs=((600, 4), (0, 0), (100, .8), (.1, 0), (0, .4), (.9, 0, -.9, 0)),
+                                  info=expInfo, logfile=logFile)
 
+logFile.close()
+core.quit()
