@@ -47,10 +47,6 @@ class agrtPsiObject(object):
     def __init__(self, x, alpha, beta, xPrecision, aPrecision, bPrecision, delta=0, stepType='lin', prior=None):
         self._probLambdaGivenXResponse = self._probResponseGivenX = self._probLambdaGivenXResponse = self._entropyXResponse = self._expectedEntropyX = self.nextIntensityIndex = self.nextIntensity = None
 
-        if delta != 0:
-            raise RuntimeWarning('Lapse rates are not currently supported.')
-            delta = 0
-
         #Save dimensions
         if stepType == 'lin':
             self.x = np.linspace(x[0], x[1], xPrecision, True)
@@ -83,7 +79,7 @@ class agrtPsiObject(object):
                 self._probLambda = prior
             else:
                 self._probLambda = prior.reshape(1, len(self.alpha), len(self.beta), 1)
-            
+                
         #Create P(r | lambda, x)
         
         # self._probResponseGivenLambdaX = np.zeros(shape=(len(self.r), len(self.alpha), len(self.beta), len(self.x)))
@@ -97,7 +93,10 @@ class agrtPsiObject(object):
         #             self._probResponseGivenLambdaX[0,i,j,k] = stats.norm.cdf(self.alpha[i], loc=self.x[k], scale=self.beta[j])
         #             self._probResponseGivenLambdaX[1,i,j,k] = 1 - stats.norm.cdf(self.alpha[i], loc=self.x[k], scale=self.beta[j])
 
-        self._probResponseGivenLambdaX = self._r + np.array([1,-1]).reshape(2,1,1,1) * stats.norm.cdf(self._alpha, loc=self._x, scale=self._beta)
+        # Without lapse
+        #self._probResponseGivenLambdaX = np.array([0,1]).reshape(2,1,1,1) + np.array([1,-1]).reshape(2,1,1,1) * stats.norm.cdf(self._alpha, loc=self._x, scale=self._beta)
+        # With lapse
+        self._probResponseGivenLambdaX = np.array([0,1]).reshape(2,1,1,1) + np.array([1,-1]).reshape(2,1,1,1) * ((self.delta/2) + (1 - self.delta) * stats.norm.cdf(self._alpha, loc=self._x, scale=self._beta))
 
 #        if TwoAFC:
 #            self._probResponseGivenLambdaX = (1-self._r) + (2*self._r-1) * ((.5 + .5 * stats.norm.cdf(self._x, self._alpha, self._beta)) * (1 - self.delta) + self.delta / 2)
@@ -133,8 +132,14 @@ class agrtPsiObject(object):
         else:
             lamb = lam
 
-        return (lamb[0] - lamb[1] * np.sqrt(2) * special.erfinv(2 * np.sqrt(thresh) - 1),
-                lamb[0] - lamb[1] * np.sqrt(2) * special.erfinv(2 * (1-np.sqrt(thresh)) - 1))
+        # With lapse
+        return (lamb[0] - lamb[1] * np.sqrt(2) * special.erfinv((2 * (np.sqrt(thresh)) - self.delta) / (1 - self.delta) - 1),
+                lamb[0] - lamb[1] * np.sqrt(2) * special.erfinv((2 * (1 - np.sqrt(thresh)) - self.delta) / (1 - self.delta) - 1))
+       
+#         Without lapse
+#         return (lamb[0] - lamb[1] * np.sqrt(2) * special.erfinv(2 * np.sqrt(thresh) - 1),
+#                 lamb[0] - lamb[1] * np.sqrt(2) * special.erfinv(2 * (1-np.sqrt(thresh)) - 1))
+
 #        if self._TwoAFC:
 #            return stats.norm.ppf((2*thresh-1)/(1-self.delta), lamb[0], lamb[1])
 #        else:
@@ -158,10 +163,11 @@ class AGRTHandler (StairHandler):
     """
     
     def __init__(self,
-                 nTrials, delta1, delta2, ## lapse rates need to be validated (I haven't been careful with them)
-                 dim1range, dim2range,
+                 nTrials, dim1range, dim2range,
+                 #delta1, delta2=None,
                  #dim1stepType='lin', dim2stepType='lin',
                  dim1steps=100, dim2steps=100,
+                 lapse=0,
                  prior=None,
                  fromFile=False,
                  extraInfo=None,
@@ -243,24 +249,33 @@ class AGRTHandler (StairHandler):
                 prior = None
         if prior is None:
             prior = [None,None]
-
+     
         # Calculate beta ranges
-        # max beta is the standard deviation that yields 95% response probability for a stimulus corresponding to the min of dimRange and decision bound at mean(dimRange)
-        dim1betaRange = [0, (np.average(dim1range) - dim1range[0]) / (np.sqrt(2) * special.erfinv(2 * .95 - 1))]
+        # max beta is the standard deviation that yields ( 99% response probability - half the marginal lapse rate i.e. 0.01 less than the saturation) for a stimulus corresponding to the min of dimRange and decision bound at mean(dimRange)
+        # min beta is max beta divided by the number of steps
+        
+        # With lapse
+        dim1betaRange = [0, (np.average(dim1range) - dim1range[0]) / (np.sqrt(2) * special.erfinv((2 * (.99-lapse/2) - lapse) / (1 - lapse) - 1))]
+        # Without lapse
+        # dim1betaRange = [0, (np.average(dim1range) - dim1range[0]) / (np.sqrt(2) * special.erfinv(2 * .99 - 1))]
         dim1betaRange[0] = dim1betaRange[1]/dim1steps
-        dim2betaRange = [0, (np.average(dim2range) - dim2range[0]) / (np.sqrt(2) * special.erfinv(2 * .95 - 1))]
+        # With lapse
+        dim2betaRange = [0, (np.average(dim2range) - dim2range[0]) / (np.sqrt(2) * special.erfinv((2 * (.99-lapse/2) - lapse) / (1 - lapse) - 1))]
+        # Without lapse
+        #dim2betaRange = [0, (np.average(dim2range) - dim2range[0]) / (np.sqrt(2) * special.erfinv(2 * .99 - 1))]
         dim2betaRange[0] = dim2betaRange[1]/dim2steps
+
 
         # Create Psi objects
         self._psi1 = agrtPsiObject(
             dim1range, dim1range, dim1betaRange, 
             dim1steps, dim1steps, dim1steps, 
-            delta=delta1, stepType='lin', prior=prior[0])
+            delta=lapse, stepType='lin', prior=prior[0])
         self._psi1.update(None)
         self._psi2 = agrtPsiObject(
             dim2range, dim2range, dim2betaRange, 
             dim2steps, dim2steps, dim2steps, 
-            delta=delta2, stepType='lin', prior=prior[1])
+            delta=lapse, stepType='lin', prior=prior[1])
         self._psi2.update(None)        
 
     def addResponse(self, result, intensity=None):
@@ -386,8 +401,13 @@ def RunAdaptiveBlock (trialFun, numTrials, Xrange, Yrange, Xsteps=100, Ysteps=10
     Maybe optional functions to be called before/after the trial ??
     """
     
+    if np.sqrt(overallAcc) >= 1.0 - lapseRate / 2:
+        raise RuntimeError('Requested accuracy is too high.')
+    elif np.sqrt(overallAcc) <= lapseRate / 2:
+        raise RuntimeError('Requested accuracy is too low.')
+    
     trialNum = 0
-    agrt = AGRTHandler(nTrials=numTrials, delta1=lapseRate, delta2=lapseRate, dim1range=Xrange, dim2range=Yrange, dim1steps=Xsteps, dim2steps=Ysteps)
+    agrt = AGRTHandler(nTrials=numTrials, lapse=lapseRate, dim1range=Xrange, dim2range=Yrange, dim1steps=Xsteps, dim2steps=Ysteps)
     for intens in agrt:
         trialNum += 1
         result = trialFun(intens, logfile=logfile, handler=agrt, trial=trialNum, info=info, additionalArgs = ['adapt'] if additionalArgs is None else additionalArgs + ['adapt'] if isinstance(additionalArgs, list) else [additionalArgs,'adapt'])
@@ -489,7 +509,7 @@ def GRTSubjectModel (stimulus, logfile=None, handler=None, trial=None, info=None
     """
     
     x, y = stimulus
-    delta, epsilon, sig, m, n, rho = additionalArgs[0] # R=[0,1,2,3]
+    delta, epsilon, sig, m, n, rho, lapse = additionalArgs[0] # R=[0,1,2,3]
     
     # calculate decision bounds based on where we are in stimulus space
     tau = delta + epsilon * np.array([y,x])
@@ -511,11 +531,14 @@ def GRTSubjectModel (stimulus, logfile=None, handler=None, trial=None, info=None
     # create the cov matrix
     mycov = np.array([[mysd[0]**2, myrho * mysd[0] * mysd[1]], [myrho * mysd[0] * mysd[1], mysd[1]**2]])
     
-    result = random.choices(((0,0),(0,1),(1,0),(1,1)), 
-                          np.array([mvnun(np.array([-np.inf, -np.inf]), tau, mymean, mycov)[0], 
-                                    mvnun(np.array([-np.inf, tau[1]]), np.array([tau[0], np.inf]), mymean, mycov)[0],
-                                    mvnun(np.array([tau[0], -np.inf]), np.array([np.inf, tau[1]]), mymean, mycov)[0],
-                                    mvnun(tau, np.array([np.inf, np.inf]), mymean, mycov)[0]]))
+    if random.random() < lapse:
+        result = random.choices(((0,0),(0,1),(1,0),(1,1)))
+    else:
+        result = random.choices(((0,0),(0,1),(1,0),(1,1)), 
+                                np.array([mvnun(np.array([-np.inf, -np.inf]), tau, mymean, mycov)[0], 
+                                          mvnun(np.array([-np.inf, tau[1]]), np.array([tau[0], np.inf]), mymean, mycov)[0],
+                                          mvnun(np.array([tau[0], -np.inf]), np.array([np.inf, tau[1]]), mymean, mycov)[0],
+                                          mvnun(tau, np.array([np.inf, np.inf]), mymean, mycov)[0]]))
     [result] = result # random.choices returns a list, but since I only want the single response tuple, unpack the returned list
     
     # log results
