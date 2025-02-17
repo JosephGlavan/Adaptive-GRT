@@ -22,6 +22,11 @@ import math
 import os #handy system and path functions
 import AGRT
 
+# To Do:
+#   - Verify everything that needs to be logged is being logged
+#   - Update all software and verify code still works
+#   - Is HSV color displaying correctly?
+#   - Full test
 
 
 ##########################################################################################################
@@ -60,6 +65,7 @@ STIM_COLS = [[STIM_HUE, STIM_SAT[0], STIM_VAL[0]],
 STIM_SIZE = 200
 MASK_SIZE = 256
 INSTRUCTION_HEIGHT = 40 # size of the font for instructions
+ACCURACY_CRITERION = 0.75
 
 
 
@@ -186,11 +192,8 @@ core.quit()
 """
 ##### END STIMULI TESTING #####
 
-logFile.write("Version\tDate\tSubject\tExperiment\tCondition\tBlock\tTrial\tDim1\tDim2\tStimulus\tKey\tResponse\tRT\tCorrect\n")
 
-
-
-
+logFile.write("Version\tDate\tSubject\tExperiment\tCondition\tBlock\tTrial\tDim1\tDim2\tStimulus\tStimNum\tKey\tResponse\tRT\tCorrect\tLambda\tStimEst\n")
 
 
 def Instructions ():
@@ -300,7 +303,8 @@ def RunTrial(stimNum, feedback):
         raise RuntimeError("Experiment not recognized")
     
     # Log the Trial    
-    logstr = "\t".join(map(str, [expVersion, expInfo['date'], expInfo['participant'], expInfo['exp'], expInfo['cond'], blockName, trialCounter, dim1, dim2, stimNum, response, respnum, rt, mycorrect])) + "\n"
+    
+    logstr = "\t".join(map(str, [expVersion, expInfo['date'], expInfo['participant'], expInfo['exp'], expInfo['cond'], blockName, trialCounter, dim1, dim2, ((0,0), (0,1), (1,0), (1,1))[stimNum], stimNum, response, respnum, rt, mycorrect, "NA", "NA"])) + "\n"
     logFile.write(logstr)
     #core.wait(1.0)
     return respnum
@@ -427,7 +431,12 @@ def RunAgrtTrial (stimulus, logfile=None, handler=None, trial=None, info=None, a
 
     
     # Log the Trial    
-    logstr = "\t".join(map(str, [expVersion, expInfo['date'], expInfo['participant'], expInfo['exp'], expInfo['cond'], additionalArgs[-1], trial, stimX, stimY, handler.thisTrial if isinstance(handler, AGRT.GRTHandler) else "NA", response, respnum, rt, mycorrect])) + "\n"
+        
+    logstr = "\t".join(map(str, [expVersion, expInfo['date'], expInfo['participant'], expInfo['exp'], expInfo['cond'], additionalArgs[-1], trial, stimX, stimY, 
+                                 handler.thisTrial if isinstance(handler, AGRT.GRTHandler) else "NA", 
+                                 stimNum, response, respnum, rt, mycorrect, 
+                                 handler.estimateLambda() if isinstance(handler, AGRT.AGRTHandler) else "NA",
+                                 handler.estimateGRTintensities(ACCURACY_CRITERION) if isinstance(handler, AGRT.AGRTHandler) else "NA"])) + "\n"
     logFile.write(logstr)
     #core.wait(1.0)
     
@@ -532,10 +541,10 @@ if expInfo['cond'] == 'a':
     AGRT.RunAdaptiveGRTExperiment(trialFunction = RunAgrtTrial, nAdaptiveTrials = 8, nGRTtrials = 8, #144, nGRTtrials = NUM_TRIALS, 
                                   dim1range = dim1Extremes, dim2range = dim2Extremes, 
                                   dim1steps=100, dim2steps=100, lapse=0.0, 
-                                  overallAccuracy=0.75, blockingFactor=2, 
+                                  overallAccuracy=ACCURACY_CRITERION, blockingFactor=2, 
                                   adaptiveFunArgs=[False], 
                                   grtFunArgs=[False],
-                                  info=expInfo, logfile=logFile)
+                                  info=expInfo, logfile=logFile, savePosterior=True)
     
 elif expInfo['cond'] == 'p':
     # Pilot Condition
