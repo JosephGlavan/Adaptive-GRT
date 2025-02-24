@@ -419,7 +419,7 @@ def RunAdaptiveBlock (trialFun, numTrials, Xrange, Yrange, Xsteps=100, Ysteps=10
         if logfile is None:
             agrt.savePosterior("posterior")
         else:
-            agrt.savePosterior(logfile.name + "_posterior")
+            agrt.savePosterior(logfile.name.rpartition(".")[0] + "_posterior")
     return agrt.estimateGRTintensities(overallAcc)
 
 
