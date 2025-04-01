@@ -23,8 +23,6 @@ import os #handy system and path functions
 import AGRT
 
 # To Do:
-# - add reference stim to practice trials
-# - update instructions
 
 
 # IMPORTANT:
