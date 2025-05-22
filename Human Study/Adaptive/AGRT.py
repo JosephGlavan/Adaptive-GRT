@@ -250,17 +250,20 @@ class AGRTHandler (StairHandler):
         if prior is None:
             prior = [None,None]
      
+        # Convert overall lapse rate to marginal lapse rate
+        marginalLapse = 1 - np.sqrt(1-lapse)
+        
         # Calculate beta ranges
         # max beta is the standard deviation that yields ( 99% response probability - half the marginal lapse rate i.e. 0.01 less than the saturation) for a stimulus corresponding to the min of dimRange and decision bound at mean(dimRange)
         # min beta is max beta divided by the number of steps
         
         # With lapse
-        dim1betaRange = [0, (np.average(dim1range) - dim1range[0]) / (np.sqrt(2) * special.erfinv((2 * (.99-lapse/2) - lapse) / (1 - lapse) - 1))]
+        dim1betaRange = [0, (np.average(dim1range) - dim1range[0]) / (np.sqrt(2) * special.erfinv((2 * (.99-marginalLapse/2) - marginalLapse) / (1 - marginalLapse) - 1))]
         # Without lapse
         # dim1betaRange = [0, (np.average(dim1range) - dim1range[0]) / (np.sqrt(2) * special.erfinv(2 * .99 - 1))]
         dim1betaRange[0] = dim1betaRange[1]/dim1steps
         # With lapse
-        dim2betaRange = [0, (np.average(dim2range) - dim2range[0]) / (np.sqrt(2) * special.erfinv((2 * (.99-lapse/2) - lapse) / (1 - lapse) - 1))]
+        dim2betaRange = [0, (np.average(dim2range) - dim2range[0]) / (np.sqrt(2) * special.erfinv((2 * (.99-marginalLapse/2) - marginalLapse) / (1 - marginalLapse) - 1))]
         # Without lapse
         #dim2betaRange = [0, (np.average(dim2range) - dim2range[0]) / (np.sqrt(2) * special.erfinv(2 * .99 - 1))]
         dim2betaRange[0] = dim2betaRange[1]/dim2steps
@@ -270,12 +273,12 @@ class AGRTHandler (StairHandler):
         self._psi1 = agrtPsiObject(
             dim1range, dim1range, dim1betaRange, 
             dim1steps, dim1steps, dim1steps, 
-            delta=lapse, stepType='lin', prior=prior[0])
+            delta=marginalLapse, stepType='lin', prior=prior[0])
         self._psi1.update(None)
         self._psi2 = agrtPsiObject(
             dim2range, dim2range, dim2betaRange, 
             dim2steps, dim2steps, dim2steps, 
-            delta=lapse, stepType='lin', prior=prior[1])
+            delta=marginalLapse, stepType='lin', prior=prior[1])
         self._psi2.update(None)        
 
     def addResponse(self, result, intensity=None):
@@ -401,9 +404,9 @@ def RunAdaptiveBlock (trialFun, numTrials, Xrange, Yrange, Xsteps=100, Ysteps=10
     Maybe optional functions to be called before/after the trial ??
     """
     
-    if np.sqrt(overallAcc) >= 1.0 - lapseRate / 2:
+    if np.sqrt(overallAcc) >= 1.0 - (1-np.sqrt(1-lapseRate)) / 2:
         raise RuntimeError('Requested accuracy is too high.')
-    elif np.sqrt(overallAcc) <= lapseRate / 2:
+    elif np.sqrt(overallAcc) <= (1-np.sqrt(1-lapseRate)) / 2:
         raise RuntimeError('Requested accuracy is too low.')
     
     trialNum = 0
@@ -537,6 +540,7 @@ def GRTSubjectModel (stimulus, logfile=None, handler=None, trial=None, info=None
     # create the cov matrix
     mycov = np.array([[mysd[0]**2, myrho * mysd[0] * mysd[1]], [myrho * mysd[0] * mysd[1], mysd[1]**2]])
     
+    # This mixture model may not be exactly the same as the model assumed by the AGRTHandler when it comes to lapses
     if random.random() < lapse:
         result = random.choices(((0,0),(0,1),(1,0),(1,1)))
     else:
